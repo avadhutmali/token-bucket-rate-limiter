@@ -49,6 +49,8 @@ public class TokenBucket {
             lock.unlock();
         }
 
-
+    }
+    public long getCurrentTokens() {
+        return currentTokens;
     }
 }
