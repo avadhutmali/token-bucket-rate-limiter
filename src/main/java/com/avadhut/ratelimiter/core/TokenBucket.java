@@ -6,7 +6,7 @@ import jakarta.annotation.PostConstruct;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class TokenBucket {
+public class TokenBucket implements RateLimitAlgorithm{
     private long maxTokens;
     private long currentTokens;
     private long refillRatePerSecond;
