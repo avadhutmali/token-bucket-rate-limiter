@@ -1,5 +1,6 @@
 package com.avadhut.ratelimiter.controller;
 
+import com.avadhut.ratelimiter.model.ClientConfigRequest;
 import com.avadhut.ratelimiter.model.RateLimitResponse;
 import com.avadhut.ratelimiter.service.RateLimitService;
 import org.springframework.http.HttpHeaders;
@@ -29,6 +30,17 @@ public class RateLimitController {
                 .status(statusCode)
                 .headers(headers)
                 .body(response);
+
+    }
+
+    @PostMapping("/admin/config")
+    public ResponseEntity<String> updateConfif(@RequestBody ClientConfigRequest request){
+        try{
+            service.updateConfigRequest(request.getClientId(),request.getMaxTokens(),request.getRefileRatePerSecond());
+            return ResponseEntity.status(200).body("Config updated for "+request.getClientId());
+        }catch (Exception e){
+            return ResponseEntity.status(500).body("failed to updated "+request.getClientId());
+        }
 
     }
 }
