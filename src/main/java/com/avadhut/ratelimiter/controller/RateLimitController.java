@@ -36,7 +36,7 @@ public class RateLimitController {
     @PostMapping("/admin/config")
     public ResponseEntity<String> updateConfif(@RequestBody ClientConfigRequest request){
         try{
-            service.updateConfigRequest(request.getClientId(),request.getMaxTokens(),request.getRefileRatePerSecond());
+            service.updateConfigRequest(request.getClientId(),request.getType(),request);
             return ResponseEntity.status(200).body("Config updated for "+request.getClientId());
         }catch (Exception e){
             return ResponseEntity.status(500).body("failed to updated "+request.getClientId());

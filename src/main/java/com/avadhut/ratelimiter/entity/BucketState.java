@@ -10,39 +10,45 @@ public class BucketState {
 
     @Id
     private String clientId;
-    private long currentTokens;
-    private long lastRefillTime;
-    private long maxTokens;
+    private String algorithmType;
+    private long maxLimit;
     private long refillRatePerSecond;
+    private long windowSizeSeconds;
+    private long remainingCapacity;
 
     public BucketState() {
     }
 
-    public BucketState(String clientId, long currentTokens, long lastRefillTime, long maxTokens, long refillRatePerSecond) {
+    public BucketState(String clientId, String algorithmType, long maxLimit, long refillRatePerSecond, long windowSizeSeconds, long remainingCapacity) {
         this.clientId = clientId;
-        this.currentTokens = currentTokens;
-        this.lastRefillTime = lastRefillTime;
-        this.maxTokens = maxTokens;
+        this.algorithmType = algorithmType;
+        this.maxLimit = maxLimit;
         this.refillRatePerSecond = refillRatePerSecond;
+        this.windowSizeSeconds = windowSizeSeconds;
+        this.remainingCapacity = remainingCapacity;
     }
 
     public String getClientId() {
         return clientId;
     }
 
-    public long getCurrentTokens() {
-        return currentTokens;
+    public String getAlgorithmType() {
+        return algorithmType;
     }
 
-    public long getLastRefillTime() {
-        return lastRefillTime;
-    }
-
-    public long getMaxTokens() {
-        return maxTokens;
+    public long getLimit() {
+        return maxLimit;
     }
 
     public long getRefillRatePerSecond() {
         return refillRatePerSecond;
+    }
+
+    public long getWindowSizeSeconds() {
+        return windowSizeSeconds;
+    }
+
+    public long getRemainingCapacity() {
+        return remainingCapacity;
     }
 }

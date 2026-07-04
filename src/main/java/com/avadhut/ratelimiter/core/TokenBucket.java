@@ -1,6 +1,7 @@
 package com.avadhut.ratelimiter.core;
 
 
+import com.avadhut.ratelimiter.entity.AlgorithmType;
 import jakarta.annotation.PostConstruct;
 
 import java.util.concurrent.TimeUnit;
@@ -22,6 +23,13 @@ public class TokenBucket implements RateLimitAlgorithm{
     public TokenBucket(long maxTokens,long refillRatePerSecond){
         this.maxTokens = maxTokens;
         this.currentTokens = maxTokens;
+        this.refillRatePerSecond = refillRatePerSecond;
+        this.lastRefilTime = System.nanoTime();
+    }
+
+    public TokenBucket(long maxTokens, long refillRatePerSecond, long currentTokens){
+        this.maxTokens = maxTokens;
+        this.currentTokens = currentTokens;
         this.refillRatePerSecond = refillRatePerSecond;
         this.lastRefilTime = System.nanoTime();
     }
@@ -76,7 +84,18 @@ public class TokenBucket implements RateLimitAlgorithm{
         }
 
     }
+
+    public long getRemainingCapacity() {
+        return currentTokens;
+    }
+
+    public long getLimit(){
+        return maxTokens;
+    }
+
     public long getCurrentTokens() {
         return currentTokens;
     }
+
+    public AlgorithmType getAlgorithmType() { return AlgorithmType.TOKEN_BUCKET; }
 }

@@ -7,8 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TokenBucketTest {
 
@@ -52,6 +51,15 @@ public class TokenBucketTest {
 
         assertTrue( allowedCount.get()<=10, "More spend Detected "+ allowedCount.get());
 
+    }
+
+    @Test
+    public void remainingCapacityShouldDecreaseAsTokensAreConsumed(){
+        TokenBucket bucket = new TokenBucket(10, 0);
+        assertTrue(bucket.tryConsume());
+        assertEquals(9, bucket.getRemainingCapacity(), "After 1 consume, 9 should remain");
+        assertTrue(bucket.tryConsume());
+        assertEquals(8, bucket.getRemainingCapacity(), "After 2 consumes, 8 should remain");
     }
 
 }

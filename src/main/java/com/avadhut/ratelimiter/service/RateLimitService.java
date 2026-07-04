@@ -1,7 +1,11 @@
 package com.avadhut.ratelimiter.service;
 
+import com.avadhut.ratelimiter.core.RateLimitAlgorithm;
 import com.avadhut.ratelimiter.core.TokenBucket;
+import com.avadhut.ratelimiter.core.factory.RateLimitAlgorithmFactory;
+import com.avadhut.ratelimiter.entity.AlgorithmType;
 import com.avadhut.ratelimiter.entity.BucketState;
+import com.avadhut.ratelimiter.model.ClientConfigRequest;
 import com.avadhut.ratelimiter.model.RateLimitResponse;
 import com.avadhut.ratelimiter.repository.RateLimiterRepository;
 import jakarta.annotation.PostConstruct;
@@ -13,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class RateLimitService {
-    private final ConcurrentHashMap<String, TokenBucket> buckets = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, RateLimitAlgorithm> buckets = new ConcurrentHashMap<>();
     private final RateLimiterRepository repository;
 
     public RateLimitService(RateLimiterRepository repository){
@@ -25,69 +29,62 @@ public class RateLimitService {
 
     //important method for the client
     public RateLimitResponse checkLimit(String userId){
-        TokenBucket bucket = buckets.computeIfAbsent(userId,id->new TokenBucket(DEFAULT_CAPACITY,DEFAULT_REFILL_RATE));
+        RateLimitAlgorithm bucket = buckets.computeIfAbsent(userId,id->new TokenBucket(DEFAULT_CAPACITY,DEFAULT_REFILL_RATE));
 
         boolean allowed = bucket.tryConsume();
         String decision = allowed ? "ALLOW" : "DENY";
 
         return new RateLimitResponse(
                 decision,
-                bucket.getMaxTokens(),
-                bucket.getCurrentTokens(),
+                bucket.getLimit(),
+                bucket.getRemainingCapacity(),
                 0L
         );
     }
 
     //update the config for the per client
-    public void updateConfigRequest(String clientId, long newMaxTokens, long newRefilRate ){
-        Optional<BucketState> currBucket = repository.findById(clientId);
+    public void updateConfigRequest(String clientId, AlgorithmType type, ClientConfigRequest request ){
 
-        if(currBucket.isEmpty()){
-            TokenBucket bucket = new TokenBucket(newMaxTokens,newRefilRate);
-            buckets.put(clientId,bucket);
-            repository.save(
-                    new BucketState(
-                            clientId,
-                            newMaxTokens,
-                            System.nanoTime(),
-                            newMaxTokens,
-                            newRefilRate
-                    )
-            );
+        RateLimitAlgorithm oldAlgorithm = buckets.get(clientId);
+        RateLimitAlgorithm newAlgorithm;
+
+        if(oldAlgorithm == null){
+            newAlgorithm = RateLimitAlgorithmFactory.create(type,request);
+        }else{
+            double remainingRatio = (double) oldAlgorithm.getRemainingCapacity()/oldAlgorithm.getLimit();
+            long newLimit = RateLimitAlgorithmFactory.getLimitFromConfig(type,request);
+            long alreadyConsumed = newLimit - (long) (remainingRatio * newLimit);
+            newAlgorithm = RateLimitAlgorithmFactory.createWithConsumed(type,request,alreadyConsumed);
         }
-        else{
-            TokenBucket liveBucket = buckets.get(clientId);
-            long currStateTokens = liveBucket != null ? liveBucket.getCurrentTokens() : currBucket.get().getCurrentTokens();
-            long currMaxTokens = currBucket.get().getMaxTokens();
+        buckets.put(clientId, newAlgorithm);
 
-            double fillRatio = (double) currStateTokens / currMaxTokens;
-            long newCurrentTokens = (long) (fillRatio * newMaxTokens);
-
-            TokenBucket bucket = new TokenBucket(newMaxTokens,newRefilRate,newCurrentTokens,System.nanoTime());
-            buckets.put(clientId,bucket);
-            repository.save(
-                    new BucketState(
-                            clientId,
-                            newCurrentTokens,
-                            buckets.get(clientId).getLastRefilTime(),
-                            newMaxTokens,
-                            newRefilRate
-                    )
-            );
-
-        }
+        repository.save(new BucketState(
+                clientId,
+                type.toString(),
+                newAlgorithm.getLimit(),
+                request.getRefileRatePerSecond(),
+                request.getWindowSizeSeconds(),
+                newAlgorithm.getRemainingCapacity()
+        ));
     }
 
     //load before statring the service
     @PostConstruct
     public void loadFromDatabase(){
-        repository.findAll().forEach(state ->
-                buckets.put(state.getClientId(), new TokenBucket(
-                        state.getMaxTokens(),
-                        state.getRefillRatePerSecond(),
-                        state.getCurrentTokens(),
-                        state.getLastRefillTime()
-                ))
+        repository.findAll().forEach(state ->{
+                    AlgorithmType type = AlgorithmType.valueOf(state.getAlgorithmType());
+                    ClientConfigRequest request = new ClientConfigRequest(
+                            state.getClientId(),
+                            state.getLimit(),
+                            state.getRefillRatePerSecond(),
+                            state.getRemainingCapacity(),
+                            state.getWindowSizeSeconds(),
+                            type
+                    );
+
+                    buckets.put(state.getClientId(), RateLimitAlgorithmFactory.create(type,request));
+
+                }
         );
         System.out.println("Loaded "+ buckets.size() +" buckets from DB");
     }
@@ -95,16 +92,24 @@ public class RateLimitService {
     //after scheduled time it flush into database
     @Scheduled(fixedDelay = 5000)
     public void flushToDataBase(){
-        buckets.forEach((clientId,bucket)->
-            repository.save(
-                    new BucketState(
-                        clientId,
-                        bucket.getCurrentTokens(),
-                        bucket.getLastRefilTime(),
-                        bucket.getMaxTokens(),
-                        bucket.getRefillRatePerSecond()
-                    )
-            )
+        buckets.forEach((clientId,bucket)->{
+                Optional<BucketState> existing = repository.findById(clientId);
+
+                long refillRate = existing.map(BucketState::getRefillRatePerSecond).orElse(0L);
+                long windowSize = existing.map(BucketState::getWindowSizeSeconds).orElse(0L);
+                repository.save(
+                        new BucketState(
+                                clientId,
+                                bucket.getAlgorithmType().toString(),
+                                bucket.getLimit(),
+                                refillRate,
+                                windowSize,
+                                bucket.getRemainingCapacity()
+                        )
+                );
+
+                }
+
         );
 
         System.out.println("Flushed "+buckets.size()+" buckets to DB");
