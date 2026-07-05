@@ -86,6 +86,11 @@ docker run -p 8080:8080 -v ~/ratelimiter-data:/app/data:z ratelimiter
 
 Java 21 · Spring Boot 3.5 · Spring Data JPA · H2 (file-based) · JMeter · Docker · AWS EC2
 
+## Live Demo
+
+http://51.20.143.235:8080/check?clientId=demo
+
+
 ## Status
 
-🚧 Core feature-complete and load-tested. Docker + cloud deployment in progress.
+✅ Feature-complete, load-tested, containerized, and deployed to AWS EC2.
