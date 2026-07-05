@@ -32,8 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 
-application.properties
-
 target/
 data/
 *.mv.db

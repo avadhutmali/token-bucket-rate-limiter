@@ -77,6 +77,11 @@ Configure or reconfigure a client's rate limit.
   with DENY rather than queuing, which is the correct behavior for a rate limiter
   under genuine overload
 
+## Running with Docker
+
+docker build -t ratelimiter .
+docker run -p 8080:8080 -v ~/ratelimiter-data:/app/data:z ratelimiter
+
 ## Stack
 
 Java 21 · Spring Boot 3.5 · Spring Data JPA · H2 (file-based) · JMeter · Docker · AWS EC2
