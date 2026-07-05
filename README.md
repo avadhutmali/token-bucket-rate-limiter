@@ -88,7 +88,12 @@ Java 21 · Spring Boot 3.5 · Spring Data JPA · H2 (file-based) · JMeter · Do
 
 ## Live Demo
 
-http://51.20.143.235:8080/check?clientId=demo
+http://13.61.200.239:8080/check?clientId=demo
+
+Try the admin config endpoint:
+curl -X POST http://13.61.200.239:8080/admin/config \
+-H "Content-Type: application/json" \
+-d '{"clientId":"yourname","requestLimit":10,"windowSizeSeconds":5,"type":"SLIDING_WINDOW"}'
 
 
 ## Status
